@@ -15,3 +15,8 @@ code {
 .c-menu-item {
   margin-top: 10px;
 }
+
+
+html {
+  margin: 0
+}
