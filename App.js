@@ -9,6 +9,8 @@ import TextField from "monday-ui-react-core/dist/TextField.js"
 import DialogContentContainer from "monday-ui-react-core/dist/DialogContentContainer.js"
 import Button from "monday-ui-react-core/dist/Button.js"
 import { Container, Col, Row } from 'react-bootstrap'
+import RemoteClient from "server/client.js"
+import RemoteServer from "server/server.js"
 
 const monday = mondaySdk();
 
@@ -68,14 +70,52 @@ class App extends React.Component {
     // MONDAY API FUNCTIONS
     // scope - boards:read
     // Gets information on all boards in the account, grabs Climate Action Board ID
+    var firstTime = true;
+    function activateTakeAction() {
+      document.querySelector("#take-action-main").style.display = 'block';
+      document.querySelector("#main").style.display = 'none';
+      // set the animation for every element classed "solution" to fadeIn 1s, with one iteration and fill forwards
+      document.querySelectorAll(".solution").forEach(function (element) {
+        element.style.animation = "fadeIn " + ( Math.random() ) + "s 1 forwards";
+      });
+      // add the "current" class to the "take action" button
+      document.querySelector("#take-action-button").classList.add("current");
+      // remove the "current" class from the "overview" button
+      document.querySelector("#overview-button").classList.remove("current");
+      // add the "current" class to the "take action" button
+      document.querySelector("#take-action-button").classList.add("bg-white");
+      // remove the "current" class from the "overview" button
+      document.querySelector("#overview-button").classList.remove("bg-white");
+
+      document.querySelector("#greatest-factor-header").innerHTML = "Greatest Contributing Factor: " + document.querySelector("#greatest-factor").innerHTML;
+    }
+
+    function activateOverview() {
+      document.querySelector("#take-action-main").style.display = 'none';
+      document.querySelector("#main").style.display = 'block';
+      // add the "current" class to the "overview" button
+      document.querySelector("#overview-button").classList.add("current");
+      // remove the "current" class from the "take action" button
+      document.querySelector("#take-action-button").classList.remove("current");
+      // remove the "current" class from the "overview" button
+      document.querySelector("#overview-button").classList.add("bg-white");
+      // add the "current" class to the "take action" button
+      document.querySelector("#take-action-button").classList.remove("bg-white");
+    }
+
     function updateBoardIdentity() {
+      activateOverview();
+      document.querySelector("#hide-while-loading").style.display = "none";
+
       document.getElementsByClassName("dialog-content-container")[0].style.display = "none";
       console.log("Updating Board Identity");
 
       // gets the board if from the URL which is param boardId
-      let boardId = window.location.search.split("=")[1];
+      console.log("URL " + window.location.search);
+      // the boardid is in the window.location.search in between "&boardId=" and "&boardViewId"
+      let boardId = window.location.search.substring(window.location.search.indexOf("&boardId=") + 9, window.location.search.indexOf("&boardViewId"));
       // remove any non numbers from the boardId
-      boardId = boardId.replace(/\D/g, "");
+      console.log("FOUND ID " + boardId);
 
 
       let query = "{ boards(ids: " + boardId + ") { id name items (limit: 20) { id name column_values { id value text } subitems { id name column_values { id value text } } } } } ";
@@ -99,7 +139,6 @@ class App extends React.Component {
 
     function updateClimateInfo(items) {
       console.log("Updating Climate Info");
-      document.querySelector("#hide-while-loading").style.display = "none";
       document.querySelector("#loader").style.display = "block";
 
       let industry, regionCode, currencyUnit, numOfServers, vehiclesDistance, numOfEmployees, numOfOffices, flightFrequency, vacationQuantity;
@@ -162,6 +201,49 @@ class App extends React.Component {
 
       let car = 0, officewaste = 0, flight = 0;
 
+      const titles = getFromServer("/titles/relevant")
+
+      function addStrategy(strat) {
+        /*
+        
+                <div class="col-sm-6">
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">Special title treatment</h5>
+                      <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                      <a href="#" class="btn btn-primary">Go somewhere</a>
+                    </div>
+                  </div>
+                </div>
+                */
+
+        let main = document.createElement("div");
+        main.classList.add("col-sm-6");
+        main.classList.add("solution");
+        main.style.marginTop = "20px";
+        document.querySelector("#solutions-list").appendChild(main);
+
+        let card = document.createElement("div");
+        card.classList.add("card");
+        main.appendChild(card);
+
+        let cardBody = document.createElement("div");
+        cardBody.classList.add("card-body");
+        card.appendChild(cardBody);
+
+        let cardTitle = document.createElement("h5");
+        cardTitle.classList.add("card-title");
+        const t = titles[Math.floor(Math.random() * titles.length)];
+        cardTitle.innerHTML = "<b>" + t + "</b>";
+        titles.splice(titles.indexOf(t), 1);
+        cardBody.appendChild(cardTitle);
+
+        let cardText = document.createElement("p");
+        cardText.classList.add("card-text");
+        cardText.innerText = strat;
+        cardBody.appendChild(cardText);
+      }
+
       // pie chart order
       // ["Motor Vehicles", "Office Waste", "Waste", "Computing Power", "Air Travel", "Employee"]
       let pieChartData = "";
@@ -208,18 +290,34 @@ class App extends React.Component {
                           // PUT THIS AFTER THE LAST REQUEST
                           //
 
-                          document.querySelector("#hide-while-loading").style.display = "block";
-                          document.querySelector("#loader").style.display = "none";
+                          // settimeout for 1s
+                          if (firstTime == true) {
+                            document.querySelector("#hide-while-loading").style.display = "block";
+                            document.querySelector("#loader").style.display = "none";
+
+                            firstTime = false;
+                            console.log("FIRST DRAW REQUESTED -- COMPLETED");
+                          }
+                          else
+                          {
+                            setTimeout(function () {
+                              document.querySelector("#hide-while-loading").style.display = "block";
+                              document.querySelector("#loader").style.display = "none";
+                            }, 1500);
+                            console.log("REDRAW REQUESTED -- COMPLETED");
+                          }
 
                           document.querySelector("#total-fp").innerHTML = Math.round(totalAmt * 100) / 100;
 
                           document.querySelector("#pie-chart-data").innerHTML = pieChartData;
 
+                          const degreeOffset = Math.random() * (1 + Math.random()) / 10;
+
                           //clear data
                           document.querySelector("#line-chart-data-1").innerHTML = totalAmt;
                           // update data
                           for (let i = 0; i < 6; i++) {
-                            const newVal = totalAmt * Math.pow(updateMultiplier, i + 1);
+                            const newVal = totalAmt * Math.pow(updateMultiplier, (i + 1) * degreeOffset);
                             document.querySelector("#line-chart-data-1").innerHTML += " " + newVal;
                           }
 
@@ -246,55 +344,37 @@ class App extends React.Component {
                           document.querySelector("#greatest-factor").innerHTML = greatestFactor;
 
                           // constants
-                          // OPENAI REDUCTION METHODS - Generated by GPT-3 Davinci-002
+                          // OPENAI REDUCTION METHODS
+                          // TODO: Compute reduction methods from the reduction factors. Will require more bakes with GPT-3. Post-beta feature?
                           // Airplane:
-                          const airplaneReductions = [
-                            "Encourage employees to use video conferencing for meetings instead of flying.",
-                            "Encourage employees to fly economy class instead of business class.",
-                            "Encourage employees to fly direct flights.",
-                            "Encourage employees to use airlines that have newer, more fuel-efficient aircraft."
-                          ]
+                          const airplaneReductions = getFromServer("/red/plane")
                           // Cars:
-                          const carReductions = [
-                            "Encourage employees to use public transportation instead of driving.",
-                            "Encourage employees to carpool.",
-                            "Encourage employees to switch to hybrid or electric vehicles.",
-                            "Implement a telecommuting policy",
-                            "Encourage employees to use ride-sharing services."
-                          ]
+                          const carReductions = getFromServer("/red/moto")
                           // Office Waste:
-                          const officWasteReductions = [
-                            "Implement an office waste policy on food, paper, and plastic.",
-                            "Work with local waste management companies to develop a recycling program specifically for the company.",
-                            "Implement a digital-only documents policy.",
-                            "Install energy-efficient lighting and appliances in the office."
-                          ]
+                          const officWasteReductions = getFromServer("/red/office")
                           // Computing:
-                          const computingReductions = [
-                            "Work with a datacenter or cloud computing service that offers green-certified datacenters.",
-                            "Encourage employees to use energy-efficient computers and monitors.",
-                            "Install energy-efficient lighting and appliances in the office."
-                          ];
+                          const computingReductions = getFromServer("/red/computing")
                           // Employee:
-                          const employeeReductions = [
-                            "Encourage employees to carpool, bike, or walk to work.",
-                            "Encourage employees to use public transportation instead of driving.",
-                            "Implement a telecommuting policy to reduce the need for employees to commute.",
-                            "Support employees in sustainable lifestyle choices, by offering discounts on gym memberships, healthy food, and public transportation."
-                          ];
+                          const employeeReductions = getFromServer("/red/employee")
+
+                          // first, delete any elements in #solutions-list that are classed "col-sm-6"
+                          let solutionsList = document.querySelector("#solutions-list");
+                          while (solutionsList.firstChild) {
+                            solutionsList.removeChild(solutionsList.firstChild);
+                          }
 
                           // based on the greatest factor, add <li> to the list #reduction-strategies-list with the corresponding strategies
                           if (greatestFactor == 'Motor Vehicles') {
                             for (let i = 0; i < carReductions.length; i++) {
-                              document.querySelector("#reduction-strategies-list").innerHTML += "<li>" + carReductions[i] + "</li>";
+                              addStrategy(carReductions[i]);
                             }
                           } else if (greatestFactor == 'Office Waste') {
                             for (let i = 0; i < officWasteReductions.length; i++) {
-                              document.querySelector("#reduction-strategies-list").innerHTML += "<li>" + officWasteReductions[i] + "</li>";
+                              addStrategy(officWasteReductions[i]);
                             }
                           } else if (greatestFactor == 'Air Travel') {
                             for (let i = 0; i < airplaneReductions.length; i++) {
-                              document.querySelector("#reduction-strategies-list").innerHTML += "<li>" + airplaneReductions[i] + "</li>";
+                              addStrategy(airplaneReductions[i]);
                             }
                           }
 
@@ -314,18 +394,6 @@ class App extends React.Component {
       );
     }
 
-    function activateTakeAction()
-    {
-      document.querySelector("#take-action-main").style.display = 'block';
-      document.querySelector("#main").style.display = 'none';
-    }
-
-    function activateOverview()
-    {
-      document.querySelector("#take-action-main").style.display = 'none';
-      document.querySelector("#main").style.display = 'block';
-    }
-
     return <div className="App" style={{ background: "#F8F9FB" }}>
 
       <div id="pie-chart-data" style={{ display: 'none' }}>14 23 21 17 15 10</div>
@@ -343,22 +411,22 @@ class App extends React.Component {
 
                 <ul class="nav nav-pills flex-column mb-auto">
                   <li onMouseOver={MouseOver} onMouseOut={MouseOut} class="nav-item c-menu-item">
-                    <a href="#" onClick={activateOverview} class="nav-link p-3 text-dark bg-white lightshadow current" aria-current="page">
+                    <a href="#" id="overview-button" onClick={activateOverview} class="nav-link p-3 text-dark bg-white lightshadow current" aria-current="page">
                       <b>Overview</b>
                     </a>
                   </li>
                   <li onMouseOver={MouseOver} onMouseOut={MouseOut} class="nav-item c-menu-item">
-                    <a href="#" onClick={activateTakeAction} class="nav-link p-3 text-dark lightshadow" aria-current="page">
+                    <a href="#" id="take-action-button" onClick={activateTakeAction} class="nav-link p-3 text-dark lightshadow" aria-current="page">
                       Take Action
                     </a>
                   </li>
                   <li onMouseOver={MouseOver} onMouseOut={MouseOut} class="nav-item c-menu-item">
-                    <a href="#" onClick={function(){window.location.reload()}} class="nav-link p-3 text-dark lightshadow" aria-current="page">
+                    <a href="#" onClick={updateBoardIdentity} class="nav-link p-3 text-dark lightshadow" aria-current="page">
                       Recalculate
                     </a>
                   </li>
                   <li onMouseOver={MouseOver} onMouseOut={MouseOut} class="nav-item c-menu-item">
-                    <a href="https://nowaythis.works/mondayapps/privacy.html" target="_blank" class="nav-link p-3 text-dark lightshadow" aria-current="page">
+                    <a href="https://www.climatiq.io/explorer" target="_blank" class="nav-link p-3 text-dark lightshadow" aria-current="page">
                       Sources
                     </a>
                   </li>
@@ -374,7 +442,7 @@ class App extends React.Component {
             </div>
           </div>
 
-          <div class="col order-2" id="take-action-main" style={{display: 'none'}}>
+          <div class="col order-2" id="take-action-main" style={{ display: 'none' }}>
             <div class="col order-2">
               <nav aria-label="breadcrumb">
                 <ol class="breadcrumb" style={{ marginTop: "37px" }}>
@@ -387,18 +455,14 @@ class App extends React.Component {
                 </ol>
               </nav>
 
-              <div class="row">
-                <div class="col">
-                  <div class="card lightshadow" style={{ border: "0", background: "0", marginTop: '12px' }}>
-                    <div class="card-body bg-white" style={{ borderRadius: "5px" }}>
-                      <h5 class="card-title">Reducing Your Footprint</h5>
-                      <p class="card-text">Based on emissions data calculated in the app, we generated some tried-and-true reduction strategies that could help.</p>
-                      <ol id="reduction-strategies-list" style={{ fontSize: '120%'}}>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-              </div>            
+              <h4 id="greatest-factor-header" style={{marginTop: '20px', marginLeft:'2px'}}>Greatest Contributing Factor: Air Travel</h4>
+              <h6>The following ideas were suggested based off of your current emissions trend.</h6>
+              
+              <div class="row" id="solutions-list" style={{width: '80%', marginTop: '-10px'}}>
+              </div>
+
+              <h6 style={{position: 'absolute', bottom: '10px'}}><b>Important!</b> This feature is still in beta. Improvements are considered openly on <a href="https://nowaythis.works/mondayapps/" target="_blank">our website</a>.</h6>
+
             </div>
           </div>
 
@@ -413,10 +477,10 @@ class App extends React.Component {
                 <li class="breadcrumb-item active" aria-current="page" id="current-page-name">Overview</li>
               </ol>
             </nav>
-            <div id="loader" style={{ display: 'none' }} color={Loader.colors.PRIMARY}>
+            <div id="loader" style={{ display: 'none', position: 'absolute', top: '50%', left: '50%', transform: 'translate(50%,-100%)' }} color={Loader.colors.PRIMARY}>
               <Loader size={40} />
             </div>
-            <div id="hide-while-loading">
+            <div id="hide-while-loading" style={{ display: 'none' }}>
               <div id="top-data" class="w-auto">
                 <div class="data-element bg-primary bg-gradient text-light lightshadow p-3 mx-3" style={{ width: '320px' }}>
                   <div class="row row-cols-2 p-1 px-3 ">
@@ -456,7 +520,7 @@ class App extends React.Component {
                     <div id="pie-chart">
                       Unable to load chart :(
                     </div>
-                    <div style={{ marginTop: "-7.5px" }}>
+                    <div>
                       <u>Insights</u> are generated by <b>Climatology</b> using the <i><a href="https://www.climatiq.io/" target="_blank">Climatiq API</a></i> and are estimates. Always ensure the cofiguration is up-to-date.
                     </div>
                   </div>
@@ -480,8 +544,8 @@ class App extends React.Component {
           wrapperClassName="monday-storybook-text-field_size"
           id="api-key"
         />
-        <p style={{marginTop: '10px'}}>This can be found <a href="https://developer.monday.com/api-reference/docs/authentication" target="_blank">here</a>.</p>
-        
+        <p style={{ marginTop: '10px' }}>This can be found <a href="https://developer.monday.com/api-reference/docs/authentication" target="_blank">here</a>.</p>
+
         <Button onClick={updateBoardIdentity}>
           Calculate
         </Button>
