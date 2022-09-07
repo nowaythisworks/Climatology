@@ -17,4 +17,4 @@ TODO:
 
 ### Build Instructions
 - requires `create-react-app`
-- simply follow the [monday.com board views tutorial](https://developer.monday.com/api-reference/docs/board-view-queries), and replace the `App.js` and `index.css` with their respective files here. Everything else is unnecessary to replace.
+- simply follow the [monday.com board views tutorial](https://developer.monday.com/api-reference/docs/board-view-queries), and replace the `App.js` and `index.css` with their respective files here.
