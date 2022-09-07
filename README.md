@@ -7,8 +7,11 @@ All the code is here, in development status.
 
 TODO:
 (ordered by urgency)
+- Collaborators! Working solo can be difficult, and a team could be very helpful and rewarding :)
 - Climatiq API call rate limit checker (right now it is just a timing function)
 - Improved range of Climatiq emissions factors, right now only five (albeit very general candidates) are supported.
+    - This will also need new citations vetted and added.
+    - For larger organizations, possibly add option to use their own Climatiq API key
 - Better GPT-3 bakes, needs to be more specific on moto vehicles
 - Better GPT-3 bakes, greater range of industries to support
 
